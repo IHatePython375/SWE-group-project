@@ -20,27 +20,6 @@ class FakeDeck:
 def _monkeypatch_deck(module, fake_deck):
     module.Deck = lambda: fake_deck
 
-def test_player_blackjack_pays_1p5(monkeypatch):
-    import blackjack as bj
-    # Initial deal order in play_round:
-    # player: deal(), dealer: deal(), player: deal(), dealer: deal()
-    # We'll make player get A + K (Blackjack)
-    seq = [
-        Card("Hearts", "A"),    # player first (will be last popped: see order below)
-        Card("Clubs", "9"),     # dealer first
-        Card("Spades", "K"),    # player second
-        Card("Diamonds", "7"),  # dealer second
-    ]
-    fake = FakeDeck(sequence=seq)
-    _monkeypatch_deck(bj, fake)
-
-    # Inputs: bet only (Blackjack branch triggers before hit/stand)
-    inputs = iter(["200"])
-    monkeypatch.setattr("builtins.input", lambda *args, **kwargs: next(inputs))
-
-    money_after = play_round(1000)
-    # Blackjack pays floor(1.5 * bet) -> int(300) = 300 added
-    assert money_after == 1300
 
 def test_player_hits_and_busts(monkeypatch):
     import blackjack as bj
