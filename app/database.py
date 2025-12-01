@@ -11,19 +11,23 @@ class DatabaseHelper:
     """
     
     def __init__(self, host='localhost', port=5432, database='blackjack_db', 
-                 user='your_user', password='your_password'):
-        self.connection_params = {
+                 user='your_user', password='your_password', 
+                 minconn=1, maxconn=20):
+        #initialize connection pool
+        self.connection_pool = psycopg2.pool.SimpleConnectionPool(
+            minconn,
+            maxconn,
             'host': host,
             'port': port,
             'database': database,
             'user': user,
             'password': password
-        }
+        )
     
     @contextmanager
     def get_connection(self):
         """Context manager for database connections"""
-        conn = psycopg2.connect(**self.connection_params)
+        conn = self.connection_pool.getconn()
         try:
             yield conn
             conn.commit()
@@ -31,7 +35,7 @@ class DatabaseHelper:
             conn.rollback()
             raise e
         finally:
-            conn.close()
+            self.connection_pool.putconn(conn)
     
     @contextmanager
     def get_cursor(self, cursor_factory=RealDictCursor):
