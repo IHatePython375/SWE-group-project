@@ -124,7 +124,12 @@ function renderNav() {
     if (view === "auth") {
       btn.disabled = !!currentUser;
     } else {
-      btn.disabled = !currentUser;
+      // **NEW: Disable all nav buttons for admins**
+      if (currentUser && currentUser.role === 'admin') {
+        btn.disabled = true;
+      } else {
+        btn.disabled = !currentUser;
+      }
     }
 
     btn.onclick = function () {
@@ -145,6 +150,12 @@ function renderView() {
 
   root.innerHTML = "";
 
+  // **NEW: Check if user is admin**
+  if (currentUser && currentUser.role === 'admin') {
+    renderAdminMessage(root);
+    return;
+  }
+
   if (currentView === "auth") {
     renderAuthView(root);
   } else if (currentView === "lobby") {
@@ -155,6 +166,54 @@ function renderView() {
     renderFriendsView(root);
   }
 }
+
+function renderAdminMessage(root) {
+  const card = document.createElement("div");
+  card.className = "card";
+
+  card.innerHTML = `
+    <h2>Admin Account</h2>
+    <p style="font-size: 1.1rem; margin: 1.5rem 0;">
+      You are logged in as an administrator.
+    </p>
+    <p style="margin-bottom: 1.5rem; color: #ccc;">
+      Admin accounts cannot play the game. Please use the command-line admin panel 
+      to perform administrative functions such as:
+    </p>
+    <ul style="list-style-position: inside; margin-left: 1rem; line-height: 1.8;">
+      <li>View All Users</li>
+      <li>View User Details</li>
+      <li>Ban/Unban User</li>
+      <li>Delete User</li>
+      <li>View Game Settings</li>
+      <li>Edit Game Settings</li>
+      <li>View Admin Logs</li>
+      <li>View All Game Sessions</li>
+      <li>Create Admin User</li>
+    </ul>
+    <p style="margin-top: 1.5rem; color: #ffb3b3;">
+      To access the admin panel, run the Python application directly:
+      <br><code style="background: #0a2540; padding: 0.3rem 0.5rem; border-radius: 3px; display: inline-block; margin-top: 0.5rem;">python blackjack.py</code>
+    </p>
+  `;
+
+  root.appendChild(card);
+}
+
+function setLoggedIn(token, user) {
+  sessionToken = token;
+  currentUser = user;
+  
+  // **NEW: Check if admin**
+  if (user.role === 'admin') {
+    currentView = "admin"; // Set to a special admin view
+  } else {
+    currentView = "lobby";
+  }
+  
+  saveSession();
+  render();
+} 
 
 //authentication
 function renderAuthView(root) {
