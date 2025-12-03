@@ -1,8 +1,10 @@
 import psycopg2
+from psycopg2 import pool
 from psycopg2.extras import RealDictCursor
 import json
 from datetime import datetime
 from contextlib import contextmanager
+import random
 
 class DatabaseHelper:
     """
@@ -14,14 +16,14 @@ class DatabaseHelper:
                  user='your_user', password='your_password', 
                  minconn=1, maxconn=20):
         #initialize connection pool
-        self.connection_pool = psycopg2.pool.SimpleConnectionPool(
+        self.connection_pool = pool.SimpleConnectionPool(
             minconn,
             maxconn,
-            'host': host,
-            'port': port,
-            'database': database,
-            'user': user,
-            'password': password
+            host = host,
+            port = port,
+            database = database,
+            user = user,
+            password = password
         )
     
     @contextmanager
@@ -69,6 +71,106 @@ class DatabaseHelper:
             """, (user_id,))
             
             return user_id
+        
+    def create_dummy_users(self, count=100):
+        """
+        Create dummy users for testing.
+        Usernames: dummy1, dummy2, ..., dummy100
+        Emails: dummy1@example.com, ...
+        Password hash: "test123" (pre-hashed or placeholder)
+        """
+        password_hash = "$2b$12$abcdefghijklmnopqrstuv1234567890abcd"  # dummy hash
+
+        created = 0
+        for i in range(1, count + 1):
+            username = f"dummy{i}"
+            email = f"dummy{i}@example.com"
+
+            try:
+                with self.get_cursor() as cursor:
+                    cursor.execute("""
+                        INSERT INTO users (username, email, password_hash, role)
+                        VALUES (%s, %s, %s, 'player')
+                        RETURNING user_id
+                    """, (username, email, password_hash))
+                    
+                    user_id = cursor.fetchone()['user_id']
+
+                    # create profile
+                    cursor.execute("""
+                        INSERT INTO user_profiles (user_id)
+                        VALUES (%s)
+                    """, (user_id,))
+                
+                print(f"Created: {username}")
+                created += 1
+
+            except Exception as e:
+                print(f"Skipping {username}: {e}")
+
+        print(f"\nFinished. Successfully created {created}/{count} dummy users.")
+
+
+    def create_dummy_leaderboard(self):
+        """
+        Create fake sessions + leaderboard entries for all dummy users (dummy1 - dummy100).
+        Uses real game_sessions so foreign keys are valid.
+        """
+        # 1) Get all dummy users
+        with self.get_cursor() as cursor:
+            cursor.execute("""
+                SELECT user_id, username
+                FROM users
+                WHERE username LIKE 'dummy%%'
+                ORDER BY user_id;
+            """)
+            users = cursor.fetchall()
+
+        created = 0
+        for u in users:
+            user_id = u["user_id"]
+            username = u["username"]
+
+            starting_money = 1000
+            rounds_completed = random.randint(5, 20)
+            final_money = starting_money + random.randint(-500, 1000)
+            profit = final_money - starting_money
+
+            # VALID game modes based on your CHECK constraint
+            game_mode = random.choice(["tournament", "freeplay"])
+
+            # 2) Create a valid game session
+            session_id = self.create_game_session(
+                user_id=user_id,
+                game_mode=game_mode,
+                starting_money=starting_money,
+                max_rounds=rounds_completed,
+            )
+
+            # 3) Update the session
+            self.update_session(
+                session_id=session_id,
+                current_money=final_money,
+                rounds_completed=rounds_completed,
+            )
+
+            # 4) Mark the session as completed
+            self.complete_session(session_id)
+
+            # 5) Insert leaderboard entry
+            self.add_to_leaderboard(
+                user_id=user_id,
+                session_id=session_id,
+                final_money=final_money,
+                rounds_completed=rounds_completed,
+                profit=profit,
+            )
+
+            print(f"Added leaderboard entry for {username} (mode={game_mode}, session={session_id})")
+            created += 1
+
+        print(f"\nFinished adding {created} dummy leaderboard entries.")
+
     
     def get_user_by_username(self, username):
         """Get user by username"""
