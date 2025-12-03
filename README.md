@@ -1,48 +1,67 @@
-# SWE Blackjack – Sprint 1 demo
-
+# SWE Blackjack
 
 ## Prereqs
-- Python 3.12+ from python.org (check “Add Python to PATH” during install)
-- PostgreSQL with pgAdmin from postgresql.org
-- Each person uses a local DB and their own password
 
-## Note
-- Do not move the `.venv` folder to avoid breaking anything. If it is in the wrong place, delete and recreate it.
+- Python 3.12+ from python.org (check "Add Python to PATH" during install)
+- PostgreSQL with pgAdmin from postgresql.org
+- Each developer uses a local Postgres database and password
+- Git installed and the project cloned locally
+
+## Notes
+
+- Do not move the `.venv` folder. If it ends up in the wrong place, delete it and recreate it.
+- Database settings are hard coded in the Python files. Update the password in:
+  - `app/api.py`
+  - `app/blackjack.py`
+  - `app/admin_launcher.py`
+  - `app/create_admin.py`
+- All of these expect a database named `blackjack_db` and user `postgres` on `localhost:5432` by default.
 
 ## First time setup (Windows)
 
-### 1) Install backend packages
+### 1) Create virtual environment and install packages
+
 ```powershell
-cd <your path>\SWE-group-project\backend
+cd <your path>\SWE-group-project
 py -3 -m venv .venv
 .\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
 ### 2) Create database and tables in pgAdmin
 
-- Create a database.
-- Tools -> Query Tool -> open `backend/schema.sql`, paste contents, Execute.
-- Tools -> Query Tool -> open `backend/seed.sql`, paste contents, Execute.
+Open pgAdmin and connect to your local server.
+
+Create a new database named `blackjack_db`.
+
+With `blackjack_db` selected:
+
+- Tools -> Query Tool  
+- Open `app/schema.sql`, copy or load the file  
+- Run the script to create all tables, views, and default settings  
+
 
 ## Run
 
 ### Backend API
 ```powershell
-cd <your path>\SWE-group-project\backend
+cd <your path>\SWE-group-project
 .\.venv\Scripts\Activate.ps1
-$env:DATABASE_URL="postgresql://postgres:YOUR_PASSWORD@localhost:5432/swe_blackjack"
-python app.py
+cd app
+python api.py
 ```
-**Note about YOUR_PASSWORD**
-- Replace `YOUR_PASSWORD` with your local Postgres password.
+**Note about password**
+- Replace password with your local Postgres password.
 - If your password has special characters, percent encode them.
 
 ## Frontend
 ```powershell
-cd <your path>\SWE-group-project\frontend
+cd <your path>\SWE-group-project\frontendtest
 py -m http.server 5173
 ```
+Open the browser to:
+http://localhost:5173
 
 ## Shutdown
 - Frontend terminal: Ctrl+C, then close.
